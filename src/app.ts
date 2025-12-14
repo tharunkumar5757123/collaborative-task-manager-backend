@@ -1,5 +1,9 @@
 import express from "express";
 import cors from "cors";
+// import cookieParser from "cookie-parser";
+// import authRoutes from "../repositories/routes/auth.routes";
+// import taskRoutes from "./src/repositories/routes/task.routes";
+// import notificationRoutes from "./src/repositories/routes/notification.routes";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.routes";
 import taskRoutes from "./routes/task.routes";
