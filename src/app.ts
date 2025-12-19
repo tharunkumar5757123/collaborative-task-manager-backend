@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
@@ -8,29 +8,46 @@ import notificationRoutes from "./routes/notification.routes";
 
 const app = express();
 
-// ✅ CORS configuration
-app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "https://collaborative-task-manager-frontend.onrender.com",
-    ],
-    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"], // include PATCH
-    allowedHeaders: ["Content-Type", "Authorization"], // add if sending JWT in headers
-    credentials: true, // allow cookies
-  })
-);
+// ✅ CORS configuration for frontend + credentials
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://collaborative-task-manager-frontend.onrender.com",
+];
 
-// Handle preflight requests for all routes
-app.options("*", cors()); // ensures OPTIONS request responds correctly
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
+  res.header(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PATCH, PUT, DELETE, OPTIONS"
+  );
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  );
+  res.header("Access-Control-Allow-Credentials", "true");
 
+  // Handle preflight OPTIONS request
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
+
+// Parse JSON and cookies
+app.options("*", cors());
 app.use(express.json());
 app.use(cookieParser());
 
+// Routes
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/tasks", taskRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 
+// Root route
 app.get("/", (_, res) => res.send("Task Manager API Running"));
 
 export default app;
