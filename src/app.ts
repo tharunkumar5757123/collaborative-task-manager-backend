@@ -8,15 +8,21 @@ import notificationRoutes from "./routes/notification.routes";
 
 const app = express();
 
+// ✅ CORS configuration
 app.use(
   cors({
     origin: [
       "http://localhost:5173",
       "https://collaborative-task-manager-frontend.onrender.com",
     ],
-    credentials: true,
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"], // include PATCH
+    allowedHeaders: ["Content-Type", "Authorization"], // add if sending JWT in headers
+    credentials: true, // allow cookies
   })
 );
+
+// Handle preflight requests for all routes
+app.options("*", cors()); // ensures OPTIONS request responds correctly
 
 app.use(express.json());
 app.use(cookieParser());
