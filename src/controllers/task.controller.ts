@@ -13,8 +13,10 @@ export const createTask = async (req: Request, res: Response) => {
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const task = await service.createTask(userId, dto);
+
     io.emit("taskCreated", task);
 
+    // Notify assigned user
     if (task.assignedToId) {
       const notification = await Notification.create({
         user: task.assignedToId,
@@ -37,14 +39,12 @@ export const updateTask = async (req: Request, res: Response) => {
     const taskId = req.params.id;
 
     const oldTask = await service.getTaskById(taskId);
-    if (!oldTask) return res.status(404).json({ message: "Task not found" });
-
     const updatedTask = await service.updateTask(taskId, dto);
-    if (!updatedTask) return res.status(404).json({ message: "Task not found after update" });
 
     io.emit("taskUpdated", updatedTask);
 
-    if (dto.assignedToId && oldTask.assignedToId.toString() !== dto.assignedToId) {
+    // Notify if assignment changed
+    if (dto.assignedToId && oldTask.assignedToId?.toString() !== dto.assignedToId) {
       const notification = await Notification.create({
         user: updatedTask.assignedToId,
         message: `You were assigned to task "${updatedTask.title}"`,
@@ -64,6 +64,7 @@ export const deleteTask = async (req: Request, res: Response) => {
   try {
     const taskId = req.params.id;
     await service.deleteTask(taskId);
+
     io.emit("taskDeleted", { id: taskId });
     res.status(204).send();
   } catch (err: any) {
