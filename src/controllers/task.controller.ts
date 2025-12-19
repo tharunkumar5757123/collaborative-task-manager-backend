@@ -1,7 +1,7 @@
 import { Response } from "express";
 import TaskModel, { ITask } from "../models/task.model";
 import { AuthRequest } from "../middlewares/auth.middleware";
-import { io } from "../server";
+import {io} from "../server";
 
 // CREATE TASK
 export const createTask = async (req: AuthRequest, res: Response) => {
