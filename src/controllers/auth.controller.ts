@@ -27,25 +27,30 @@ export const register = async (req: Request, res: Response) => {
    LOGIN
 ====================== */
 export const login = async (req: Request, res: Response) => {
-  LoginDto.parse(req.body);
+  try {
+    LoginDto.parse(req.body);
 
-  const { user, token } = await service.login(
-    req.body.email,
-    req.body.password
-  );
+    const { user, token } = await service.login(
+      req.body.email,
+      req.body.password
+    );
 
-  // ❌ never send password
-  const { password, ...safeUser } = user.toObject();
+    // user is already plain object
+    const { password, ...safeUser } = user;
 
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite:
-      process.env.NODE_ENV === "production" ? "none" : "lax",
-  });
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    });
 
-  res.json(safeUser);
+    res.json(safeUser);
+  } catch (err: any) {
+    console.error("Login error:", err.message || err);
+    res.status(500).json({ message: err.message || "Server error" });
+  }
 };
+
 
 /* ======================
    GET CURRENT USER
