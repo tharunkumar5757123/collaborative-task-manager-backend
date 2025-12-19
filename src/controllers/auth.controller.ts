@@ -56,14 +56,22 @@ export const login = async (req: Request, res: Response) => {
    GET CURRENT USER
 ====================== */
 export const me = async (req: Request, res: Response) => {
-  const token = req.cookies.token;
+  try {
+    const token = req.cookies.token;
 
-  if (!token) {
-    return res.status(401).json({ message: "Not authenticated" });
+    if (!token) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const user = await service.getMe(token);
+
+    // user is already a plain object
+    const { password, ...safeUser } = user;
+
+    res.json(safeUser);
+  } catch (err: any) {
+    console.error("Me error:", err.message || err);
+    res.status(500).json({ message: err.message || "Server error" });
   }
-
-  const user = await service.getMe(token);
-
-  const { password, ...safeUser } = user.toObject();
-  res.json(safeUser);
 };
+
