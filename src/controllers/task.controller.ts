@@ -1,96 +1,102 @@
 import { Request, Response } from "express";
 import { TaskService } from "../services/task.service";
-import { CreateTaskDto, UpdateTaskDto } from "../dto/task.dto";
 import { io } from "../server";
 import Notification from "../models/notification.model";
 
 const service = new TaskService();
 
-/**
- * Create Task
- */
+// CREATE TASK
 export const createTask = async (req: Request, res: Response) => {
-  const dto = CreateTaskDto.parse(req.body);
+  try {
+    const dto = req.body;
 
-  const task = await service.createTask(
-    (req as any).userId,
-    dto
-  );
+    const userId = (req as any).userId;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-  // 🔴 Real-time task event
-  io.emit("taskCreated", task);
+    // Validate due date
+    if (new Date(dto.dueDate) < new Date()) {
+      return res.status(400).json({ message: "Due date cannot be in the past" });
+    }
 
-  // 🔔 Notify assigned user
-  await notifyAssignment(task);
+    // Create task
+    const task = await service.createTask(userId, dto);
 
-  res.status(201).json(task);
-};
+    // Real-time socket event
+    io.emit("taskCreated", task);
 
-/**
- * Update Task
- */
-export const updateTask = async (req: Request, res: Response) => {
-  const dto = UpdateTaskDto.parse(req.body);
+    // Notify assigned user
+    if (task.assignedToId) {
+      const notification = await Notification.create({
+        user: task.assignedToId,
+        message: `You were assigned to task "${task.title}"`,
+      });
+      io.to(task.assignedToId.toString()).emit("notification:new", notification);
+    }
 
-  // Get old task before update
-  const oldTask = await service.getTaskById(req.params.id);
-
-  const updatedTask = await service.updateTask(req.params.id, dto);
-
-  io.emit("taskUpdated", updatedTask);
-
-  // 🔔 Notify ONLY if assignment changed
-  if (
-    dto.assignedToId &&
-    oldTask.assignedToId?.toString() !== dto.assignedToId
-  ) {
-    await notifyAssignment(updatedTask);
+    res.status(201).json(task);
+  } catch (err: any) {
+    console.error("Error creating task:", err);
+    res.status(500).json({ message: "Server error", details: err.message });
   }
-
-  res.json(updatedTask);
 };
 
-/**
- * Delete Task
- */
+// UPDATE TASK
+export const updateTask = async (req: Request, res: Response) => {
+  try {
+    const dto = req.body;
+    const taskId = req.params.id;
+
+    // Get old task
+    const oldTask = await service.getTaskById(taskId);
+
+    const updatedTask = await service.updateTask(taskId, dto);
+
+    io.emit("taskUpdated", updatedTask);
+
+    // Notify if assignment changed
+    if (dto.assignedToId && oldTask.assignedToId?.toString() !== dto.assignedToId) {
+      const notification = await Notification.create({
+        user: updatedTask.assignedToId,
+        message: `You were assigned to task "${updatedTask.title}"`,
+      });
+      io.to(updatedTask.assignedToId.toString()).emit("notification:new", notification);
+    }
+
+    res.json(updatedTask);
+  } catch (err: any) {
+    console.error("Error updating task:", err);
+    res.status(500).json({ message: "Server error", details: err.message });
+  }
+};
+
+// DELETE TASK
 export const deleteTask = async (req: Request, res: Response) => {
-  await service.deleteTask(req.params.id);
+  try {
+    const taskId = req.params.id;
+    await service.deleteTask(taskId);
 
-  io.emit("taskDeleted", { id: req.params.id });
+    io.emit("taskDeleted", { id: taskId });
 
-  res.status(204).send();
+    res.status(204).send();
+  } catch (err: any) {
+    console.error("Error deleting task:", err);
+    res.status(500).json({ message: "Server error", details: err.message });
+  }
 };
 
-/**
- * Get Tasks with Filters
- */
+// GET TASKS
 export const getTasks = async (req: Request, res: Response) => {
-  const filters: any = {};
+  try {
+    const filters: any = {};
+    if (req.query.status) filters.status = req.query.status;
+    if (req.query.priority) filters.priority = req.query.priority;
+    if (req.query.assignedToId) filters.assignedToId = req.query.assignedToId;
 
-  if (req.query.status) filters.status = req.query.status;
-  if (req.query.priority) filters.priority = req.query.priority;
-  if (req.query.assignedToId)
-    filters.assignedToId = req.query.assignedToId;
+    const tasks = await service.getTasks(filters);
 
-  const tasks = await service.getTasks(filters);
-
-  res.json(tasks);
-};
-
-/**
- * 🔔 Assignment Notification
- */
-const notifyAssignment = async (task: any) => {
-  if (!task.assignedToId) return;
-
-  const notification = await Notification.create({
-    user: task.assignedToId,
-    message: `You were assigned to task "${task.title}"`,
-  });
-
-  // Emit to user-specific socket room
-  io.to(task.assignedToId.toString()).emit(
-    "notification:new",
-    notification
-  );
+    res.json(tasks);
+  } catch (err: any) {
+    console.error("Error fetching tasks:", err);
+    res.status(500).json({ message: "Server error", details: err.message });
+  }
 };
