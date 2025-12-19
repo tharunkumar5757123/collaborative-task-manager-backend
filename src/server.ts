@@ -5,12 +5,14 @@ import app from "./app";
 import { connectDB } from "./config/db";
 
 dotenv.config();
+
+// Connect to MongoDB
 connectDB();
 
 // Create HTTP server
 const server = http.createServer(app);
 
-// Create and export Socket.IO instance
+// Socket.IO setup
 export const io = new Server(server, {
   cors: {
     origin: [
@@ -22,9 +24,13 @@ export const io = new Server(server, {
   },
 });
 
-// Socket connection
 io.on("connection", (socket) => {
   console.log("New client connected:", socket.id);
+
+  // Optional: handle disconnect
+  socket.on("disconnect", () => {
+    console.log("Client disconnected:", socket.id);
+  });
 });
 
 // Start server
