@@ -1,9 +1,6 @@
-import mongoose, { Document, Schema, Model } from "mongoose";
+import mongoose, { Document, Schema, Model, HookNextFunction } from "mongoose";
 import bcrypt from "bcryptjs";
 
-/* ============================
-   USER INTERFACE
-============================ */
 export interface IUser extends Document {
   name: string;
   email: string;
@@ -12,9 +9,6 @@ export interface IUser extends Document {
   comparePassword(candidate: string): Promise<boolean>;
 }
 
-/* ============================
-   USER SCHEMA
-============================ */
 const userSchema = new Schema<IUser>(
   {
     name: { type: String, required: true, trim: true },
@@ -25,28 +19,20 @@ const userSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-/* ============================
-   HASH PASSWORD BEFORE SAVE
-============================ */
-userSchema.pre<IUser>("save", async function (next) {
-  if (!this.isModified("password")) return next();
+userSchema.pre("save", async function (next: HookNextFunction) {
+  const user = this as IUser;
+  if (!user.isModified("password")) return next();
   try {
-    this.password = await bcrypt.hash(this.password, 10);
+    user.password = await bcrypt.hash(user.password, 10);
     next();
   } catch (err) {
-    next(err as any);
+    next(err);
   }
 });
 
-/* ============================
-   COMPARE PASSWORD METHOD
-============================ */
 userSchema.methods.comparePassword = async function (candidate: string): Promise<boolean> {
   return bcrypt.compare(candidate, this.password);
 };
 
-/* ============================
-   CREATE & EXPORT MODEL
-============================ */
 const User: Model<IUser> = mongoose.model<IUser>("User", userSchema);
 export default User;

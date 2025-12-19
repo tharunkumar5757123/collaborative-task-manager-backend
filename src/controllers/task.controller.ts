@@ -1,36 +1,40 @@
-import { Request, Response } from "express";
-import { Types } from "mongoose";
-import { TaskService } from "../services/task.service";
-import { io } from "../server";
+import { Response } from "express";
+import TaskModel, { ITask } from "../models/task.model";
 import Notification from "../models/notification.model";
+import { AuthRequest } from "../middlewares/auth.middleware";
+import { io } from "../server";
 
-const service = new TaskService();
-
-export const createTask = async (req: Request, res: Response) => {
+/* CREATE TASK */
+export const createTask = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user!._id.toString();
+    const userId = req.user?._id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
     const { title, description, dueDate, priority, assignedToId, status } = req.body;
 
     if (!title) return res.status(400).json({ message: "Title is required" });
 
-    const payload: any = {
+    const taskData: Partial<ITask> = {
       title,
-      description: description || undefined,
+      description,
       priority,
       status: status || "To Do",
-      assignedToId: assignedToId ? new Types.ObjectId(assignedToId) : undefined,
+      assignedToId,
+      creatorId: userId,
       dueDate: dueDate ? new Date(dueDate) : undefined,
     };
 
-    const task = await service.createTask(userId, payload);
+    const task = await TaskModel.create(taskData);
+
     io.emit("taskCreated", task);
 
-    if (task.assignedToId) {
+    // Notify assigned user
+    if (assignedToId) {
       const notification = await Notification.create({
-        user: task.assignedToId.toString(),
+        user: assignedToId,
         message: `You were assigned to task "${task.title}"`,
       });
-      io.to(task.assignedToId.toString()).emit("notification:new", notification);
+      io.to(assignedToId.toString()).emit("notification:new", notification);
     }
 
     res.status(201).json(task);
@@ -39,15 +43,27 @@ export const createTask = async (req: Request, res: Response) => {
   }
 };
 
-export const updateTask = async (req: Request, res: Response) => {
+/* UPDATE TASK */
+export const updateTask = async (req: AuthRequest, res: Response) => {
   try {
     const taskId = req.params.id;
-    const dto = req.body;
+    const updates = req.body;
 
-    const updatedTask = await service.updateTask(taskId, dto);
-    if (!updatedTask) return res.status(404).json({ message: "Task not found" });
+    const oldTask = await TaskModel.findById(taskId);
+    if (!oldTask) return res.status(404).json({ message: "Task not found" });
+
+    const updatedTask = await TaskModel.findByIdAndUpdate(taskId, updates, { new: true });
 
     io.emit("taskUpdated", updatedTask);
+
+    // Notify newly assigned user
+    if (updates.assignedToId && oldTask.assignedToId?.toString() !== updates.assignedToId) {
+      const notification = await Notification.create({
+        user: updates.assignedToId,
+        message: `You were assigned to task "${updatedTask?.title}"`,
+      });
+      io.to(updates.assignedToId.toString()).emit("notification:new", notification);
+    }
 
     res.json(updatedTask);
   } catch (err: any) {
@@ -55,10 +71,12 @@ export const updateTask = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteTask = async (req: Request, res: Response) => {
+/* DELETE TASK */
+export const deleteTask = async (req: AuthRequest, res: Response) => {
   try {
     const taskId = req.params.id;
-    await service.deleteTask(taskId);
+    await TaskModel.findByIdAndDelete(taskId);
+
     io.emit("taskDeleted", { id: taskId });
     res.status(204).send();
   } catch (err: any) {
@@ -66,14 +84,17 @@ export const deleteTask = async (req: Request, res: Response) => {
   }
 };
 
-export const getTasks = async (req: Request, res: Response) => {
+/* GET TASKS */
+export const getTasks = async (req: AuthRequest, res: Response) => {
   try {
     const filters: any = {};
-    if (req.query.status) filters.status = req.query.status;
-    if (req.query.priority) filters.priority = req.query.priority;
-    if (req.query.assignedToId) filters.assignedToId = new Types.ObjectId(req.query.assignedToId as string);
+    const { status, priority, assignedToId } = req.query;
 
-    const tasks = await service.getTasks(filters);
+    if (status) filters.status = status;
+    if (priority) filters.priority = priority;
+    if (assignedToId) filters.assignedToId = assignedToId;
+
+    const tasks = await TaskModel.find(filters).sort({ createdAt: -1 });
     res.json(tasks);
   } catch (err: any) {
     res.status(500).json({ message: err.message });

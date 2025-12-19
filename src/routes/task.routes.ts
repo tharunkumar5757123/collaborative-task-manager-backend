@@ -1,14 +1,6 @@
 import { Router } from "express";
-import {
-  createTask,
-  updateTask,
-  deleteTask,
-  getTasks,
-} from "../controllers/task.controller";
-import {
-  authMiddleware,
-  authorizeTaskOwner,
-} from "../middlewares/auth.middleware";
+import { createTask, updateTask, deleteTask, getTasks } from "../controllers/task.controller";
+import { authMiddleware, authorizeTaskOwner } from "../middlewares/auth.middleware";
 
 const router = Router();
 

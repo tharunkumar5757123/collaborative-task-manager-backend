@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types } from "mongoose";
+import mongoose, { Document, Schema, Types, Model } from "mongoose";
 
 export interface ITask extends Document {
   title: string;
@@ -10,7 +10,7 @@ export interface ITask extends Document {
   assignedToId?: Types.ObjectId;
 }
 
-const TaskSchema = new Schema<ITask>(
+const taskSchema = new Schema<ITask>(
   {
     title: { type: String, required: true, maxlength: 100 },
     description: { type: String },
@@ -31,4 +31,5 @@ const TaskSchema = new Schema<ITask>(
   { timestamps: true }
 );
 
-export const TaskModel = model<ITask>("Task", TaskSchema);
+const TaskModel: Model<ITask> = mongoose.model<ITask>("Task", taskSchema);
+export default TaskModel;

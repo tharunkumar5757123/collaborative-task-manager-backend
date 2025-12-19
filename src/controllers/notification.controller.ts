@@ -1,28 +1,43 @@
-import { Request, Response } from "express";
-import { NotificationService } from "../services/notification.service";
+import { Response } from "express";
+import Notification from "../models/notification.model";
+import { AuthRequest } from "../middlewares/auth.middleware";
 
-const service = new NotificationService();
-
-export const getNotifications = async (req: Request, res: Response) => {
-  const notifications = await service.getUserNotifications(
-    (req as any).userId
-  );
-  res.json(notifications);
+/* GET USER NOTIFICATIONS */
+export const getNotifications = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?._id;
+    const notifications = await Notification.find({ user: userId }).sort({ createdAt: -1 });
+    res.json(notifications);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
-export const markNotificationRead = async (
-  req: Request,
-  res: Response
-) => {
-  const updated = await service.markAsRead(
-    req.params.id,
-    (req as any).userId
-  );
+/* MARK SINGLE AS READ */
+export const markAsRead = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?._id;
+    const notificationId = req.params.id;
 
-  res.json(updated);
+    const notification = await Notification.findOneAndUpdate(
+      { _id: notificationId, user: userId },
+      { read: true },
+      { new: true }
+    );
+
+    res.json(notification);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
-export const markAllRead = async (req: Request, res: Response) => {
-  await service.markAllAsRead((req as any).userId);
-  res.status(204).send();
+/* MARK ALL AS READ */
+export const markAllAsRead = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?._id;
+    await Notification.updateMany({ user: userId, read: false }, { read: true });
+    res.json({ message: "All notifications marked as read" });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
 };

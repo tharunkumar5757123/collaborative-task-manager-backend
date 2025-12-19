@@ -2,14 +2,19 @@ import http from "http";
 import { Server } from "socket.io";
 import dotenv from "dotenv";
 import app from "./app";
-import { connectDB } from "./config/db";
+import mongoose from "mongoose";
 
 dotenv.config();
-connectDB(); // Connect to MongoDB
+
+// MongoDB connection
+mongoose
+  .connect(process.env.MONGO_URI!)
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => console.error("MongoDB connection error:", err));
 
 const server = http.createServer(app);
 
-// Socket.IO setup
+// Socket.IO
 export const io = new Server(server, {
   cors: {
     origin: [
@@ -21,13 +26,11 @@ export const io = new Server(server, {
 });
 
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
   const userId = socket.handshake.auth?.userId;
   if (userId) socket.join(userId);
+  console.log("Socket connected:", socket.id);
 
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-  });
+  socket.on("disconnect", () => console.log("Socket disconnected:", socket.id));
 });
 
 const PORT = process.env.PORT || 5000;
