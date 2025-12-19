@@ -1,44 +1,44 @@
-import jwt from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import User, { IUser } from "../models/user.model";
 import { TaskModel } from "../models/task.model";
 
-export const authMiddleware = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+/* Extend Express Request */
+declare global {
+  namespace Express {
+    interface Request {
+      user?: IUser;
+    }
+  }
+}
+
+/* ======================
+   AUTHENTICATION
+====================== */
+export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: "Unauthorized" });
 
-    if (!token) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
-      id: string;
-    };
-
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string };
     const user = await User.findById(decoded.id).select("-password");
-    if (!user) {
-      return res.status(401).json({ message: "User not found" });
-    }
+    if (!user) return res.status(401).json({ message: "User not found" });
 
     req.user = user;
     next();
   } catch {
-    return res.status(401).json({ message: "Invalid token" });
+    res.status(401).json({ message: "Invalid token" });
   }
 };
 
-export const authorizeTaskOwner = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+/* ======================
+   TASK OWNER AUTHORIZATION
+====================== */
+export const authorizeTaskOwner = async (req: Request, res: Response, next: NextFunction) => {
   const task = await TaskModel.findById(req.params.id);
   if (!task) return res.status(404).json({ message: "Task not found" });
 
-  if (task.creatorId.toString() !== (req as any).userId) {
+  if (task.creatorId.toString() !== req.user?._id.toString()) {
     return res.status(403).json({ message: "Forbidden" });
   }
 

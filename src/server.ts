@@ -5,10 +5,11 @@ import app from "./app";
 import { connectDB } from "./config/db";
 
 dotenv.config();
-connectDB();
+connectDB(); // Connect to MongoDB
 
 const server = http.createServer(app);
 
+// Socket.IO setup
 export const io = new Server(server, {
   cors: {
     origin: [
@@ -20,11 +21,14 @@ export const io = new Server(server, {
 });
 
 io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
   const userId = socket.handshake.auth?.userId;
   if (userId) socket.join(userId);
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+  });
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () =>
-  console.log(`🚀 Server running on port ${PORT}`)
-);
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
