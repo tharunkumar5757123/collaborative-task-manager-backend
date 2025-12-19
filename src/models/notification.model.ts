@@ -9,7 +9,7 @@ export interface INotification extends Document {
 
 const notificationSchema = new Schema<INotification>(
   {
-    user: { type: Types.ObjectId, ref: "User", required: true },
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true }, // ✅ Use Schema.Types.ObjectId
     message: { type: String, required: true },
     read: { type: Boolean, default: false },
   },
@@ -20,4 +20,5 @@ const Notification: Model<INotification> = mongoose.model<INotification>(
   "Notification",
   notificationSchema
 );
+
 export default Notification;
