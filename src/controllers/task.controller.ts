@@ -11,16 +11,23 @@ const service = new TaskService();
  */
 export const createTask = async (req: Request, res: Response) => {
   try {
-    const dto = req.body;
     const userId = (req as any).userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
+    const dto = req.body;
+
+    // Validate assignedToId if provided
+    if (dto.assignedToId && !Types.ObjectId.isValid(dto.assignedToId)) {
+      return res.status(400).json({ message: "Invalid assignedToId" });
+    }
+
+    // Create task
     const task = await service.createTask(userId, dto);
 
-    // Real-time socket event
+    // Socket.io event
     io.emit("taskCreated", task);
 
-    // Notify assigned user (if any)
+    // Notify assigned user
     if (task.assignedToId) {
       const notification = await Notification.create({
         user: task.assignedToId.toString(),
@@ -50,18 +57,12 @@ export const updateTask = async (req: Request, res: Response) => {
     io.emit("taskUpdated", updatedTask);
 
     // Notify if assignment changed
-    if (
-      dto.assignedToId &&
-      oldTask.assignedToId?.toString() !== dto.assignedToId
-    ) {
+    if (dto.assignedToId && oldTask.assignedToId?.toString() !== dto.assignedToId) {
       const notification = await Notification.create({
         user: updatedTask.assignedToId.toString(),
         message: `You were assigned to task "${updatedTask.title}"`,
       });
-      io.to(updatedTask.assignedToId.toString()).emit(
-        "notification:new",
-        notification
-      );
+      io.to(updatedTask.assignedToId.toString()).emit("notification:new", notification);
     }
 
     res.json(updatedTask);
@@ -88,18 +89,14 @@ export const deleteTask = async (req: Request, res: Response) => {
 };
 
 /**
- * GET TASKS WITH FILTERS
+ * GET TASKS
  */
 export const getTasks = async (req: Request, res: Response) => {
   try {
     const filters: any = {};
-
     if (req.query.status) filters.status = req.query.status;
     if (req.query.priority) filters.priority = req.query.priority;
-    if (req.query.assignedToId)
-      filters.assignedToId = new Types.ObjectId(
-        req.query.assignedToId as string
-      );
+    if (req.query.assignedToId) filters.assignedToId = new Types.ObjectId(req.query.assignedToId as string);
 
     const tasks = await service.getTasks(filters);
     res.json(tasks);
