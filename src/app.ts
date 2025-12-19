@@ -14,9 +14,10 @@ app.use(
       "http://localhost:5173",
       "https://collaborative-task-manager-frontend.onrender.com",
     ],
-    credentials: true,
+    credentials: true, // 🔥 REQUIRED
   })
 );
+
 
 app.use(express.json());
 app.use(cookieParser());
