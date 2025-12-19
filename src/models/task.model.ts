@@ -1,4 +1,5 @@
-import mongoose, { Document, Schema, Types, Model } from "mongoose";
+// src/models/task.model.ts
+import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface ITask extends Document {
   title: string;
@@ -6,30 +7,25 @@ export interface ITask extends Document {
   dueDate?: Date;
   priority: "Low" | "Medium" | "High" | "Urgent";
   status: "To Do" | "In Progress" | "Review" | "Completed";
-  creatorId: Types.ObjectId;
-  assignedToId?: Types.ObjectId;
+  creatorId: string;
+  assignedToId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const taskSchema = new Schema<ITask>(
   {
-    title: { type: String, required: true, maxlength: 100 },
+    title: { type: String, required: true },
     description: { type: String },
     dueDate: { type: Date },
-    priority: {
-      type: String,
-      enum: ["Low", "Medium", "High", "Urgent"],
-      default: "Medium",
-    },
-    status: {
-      type: String,
-      enum: ["To Do", "In Progress", "Review", "Completed"],
-      default: "To Do",
-    },
-    creatorId: { type: Types.ObjectId, ref: "User", required: true },
-    assignedToId: { type: Types.ObjectId, ref: "User" },
+    priority: { type: String, enum: ["Low", "Medium", "High", "Urgent"], default: "Medium" },
+    status: { type: String, enum: ["To Do", "In Progress", "Review", "Completed"], default: "To Do" },
+    creatorId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    assignedToId: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
 );
 
 const TaskModel: Model<ITask> = mongoose.model<ITask>("Task", taskSchema);
+
 export default TaskModel;

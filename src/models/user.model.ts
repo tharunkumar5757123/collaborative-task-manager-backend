@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema, Model, HookNextFunction } from "mongoose";
+import mongoose, { Document, Schema, Model } from "mongoose";
 import bcrypt from "bcryptjs";
 
 export interface IUser extends Document {
@@ -19,11 +19,11 @@ const userSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-userSchema.pre("save", async function (next: HookNextFunction) {
-  const user = this as IUser;
-  if (!user.isModified("password")) return next();
+userSchema.pre<IUser>("save", async function (next: (err?: any) => void) {
+  if (!this.isModified("password")) return next();
   try {
-    user.password = await bcrypt.hash(user.password, 10);
+    const hash = await bcrypt.hash(this.password, 10);
+    this.password = hash;
     next();
   } catch (err) {
     next(err);
@@ -35,4 +35,5 @@ userSchema.methods.comparePassword = async function (candidate: string): Promise
 };
 
 const User: Model<IUser> = mongoose.model<IUser>("User", userSchema);
+
 export default User;
