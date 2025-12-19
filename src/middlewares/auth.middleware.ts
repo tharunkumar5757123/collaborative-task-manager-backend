@@ -7,28 +7,51 @@ export interface AuthRequest extends Request {
   user?: IUser;
 }
 
-// Auth middleware
-export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const token = req.cookies.token;
-    if (!token) return res.status(401).json({ message: "Unauthorized" });
+// ✅ Auth middleware
+export const authMiddleware = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  // 🔥 VERY IMPORTANT: allow CORS preflight
+  if (req.method === "OPTIONS") {
+    return next();
+  }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string; role: string };
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET!
+    ) as { id: string; role?: string };
+
     const user = await User.findById(decoded.id).select("-password");
-    if (!user) return res.status(401).json({ message: "User not found" });
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
 
     req.user = user;
     next();
-  } catch {
-    res.status(401).json({ message: "Invalid token" });
+  } catch (err) {
+    return res.status(401).json({ message: "Invalid token" });
   }
 };
 
-// Task owner authorization
-export const authorizeTaskOwner = async (req: AuthRequest, res: Response, next: NextFunction) => {
+// ✅ Task owner authorization
+export const authorizeTaskOwner = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const task = await TaskModel.findById(req.params.id);
-    if (!task) return res.status(404).json({ message: "Task not found" });
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
 
     if (!req.user || task.creatorId.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Forbidden" });
