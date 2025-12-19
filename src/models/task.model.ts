@@ -3,44 +3,30 @@ import { Schema, model, Types, Document } from "mongoose";
 export interface ITask extends Document {
   title: string;
   description?: string;
-  dueDate?: Date;              // ✅ optional
+  dueDate?: Date;
   priority: "Low" | "Medium" | "High" | "Urgent";
   status: "To Do" | "In Progress" | "Review" | "Completed";
   creatorId: Types.ObjectId;
-  assignedToId?: Types.ObjectId; // ✅ optional
+  assignedToId?: Types.ObjectId;
 }
 
 const TaskSchema = new Schema<ITask>(
   {
     title: { type: String, required: true, maxlength: 100 },
-
     description: { type: String },
-
-    dueDate: { type: Date }, // ✅ NOT required
-
+    dueDate: { type: Date },
     priority: {
       type: String,
       enum: ["Low", "Medium", "High", "Urgent"],
       default: "Medium",
     },
-
     status: {
       type: String,
       enum: ["To Do", "In Progress", "Review", "Completed"],
       default: "To Do",
     },
-
-    creatorId: {
-      type: Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-
-    assignedToId: {
-      type: Types.ObjectId,
-      ref: "User",
-      required: false, // ✅ IMPORTANT
-    },
+    creatorId: { type: Types.ObjectId, ref: "User", required: true },
+    assignedToId: { type: Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
 );
