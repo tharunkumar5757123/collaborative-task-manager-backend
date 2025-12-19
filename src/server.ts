@@ -15,9 +15,9 @@ export const io = new Server(server, {
   cors: {
     origin: [
       "http://localhost:5173",
-      "https://collaborative-task-manager-frontend.onrender.com",
+      "https://6944ee6621eeb000084980d4--friendly-sprite-b8bfc2.netlify.app",
     ],
-    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
     credentials: true,
   },
 });
