@@ -1,35 +1,32 @@
-import express from "express";
-import cors from "cors";
-import cookieParser from "cookie-parser";
+import http from "http";
+import { Server } from "socket.io";
+import dotenv from "dotenv";
+import app from "./app";
+import { connectDB } from "./config/db";
 
-import authRoutes from "./routes/auth.routes";
-import taskRoutes from "./routes/task.routes";
-import notificationRoutes from "./routes/notification.routes";
+dotenv.config();
+connectDB();
 
-const app = express();
+// Create HTTP server
+const server = http.createServer(app);
 
-// ✅ CORS configuration
-app.use(
-  cors({
+// Create and export Socket.IO instance
+export const io = new Server(server, {
+  cors: {
     origin: [
       "http://localhost:5173",
       "https://collaborative-task-manager-frontend.onrender.com",
     ],
-    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"], // include PATCH
-    credentials: true, // allow cookies
-  })
-);
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+  },
+});
 
-// Handle preflight requests for all routes
-app.options("*", cors());
+// Socket connection
+io.on("connection", (socket) => {
+  console.log("New client connected:", socket.id);
+});
 
-app.use(express.json());
-app.use(cookieParser());
-
-app.use("/api/v1/auth", authRoutes);
-app.use("/api/v1/tasks", taskRoutes);
-app.use("/api/v1/notifications", notificationRoutes);
-
-app.get("/", (_, res) => res.send("Task Manager API Running"));
-
-export default app;
+// Start server
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
