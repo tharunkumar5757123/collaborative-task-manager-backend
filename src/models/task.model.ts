@@ -1,6 +1,7 @@
 import { Schema, model, Types } from "mongoose";
+import { ITask } from "./task.interface"; // make sure path is correct
 
-const TaskSchema = new Schema(
+const TaskSchema = new Schema<ITask>(
   {
     title: { type: String, required: true, maxlength: 100 },
     description: { type: String },
@@ -9,19 +10,19 @@ const TaskSchema = new Schema(
     priority: {
       type: String,
       enum: ["Low", "Medium", "High", "Urgent"],
-      default: "Medium"
+      default: "Medium",
     },
 
     status: {
       type: String,
       enum: ["To Do", "In Progress", "Review", "Completed"],
-      default: "To Do"
+      default: "To Do",
     },
 
     creatorId: { type: Types.ObjectId, ref: "User", required: true },
-    assignedToId: { type: Types.ObjectId, ref: "User", required: true }
+    assignedToId: { type: Types.ObjectId, ref: "User", required: true },
   },
   { timestamps: true }
 );
 
-export const TaskModel = model("Task", TaskSchema);
+export const TaskModel = model<ITask>("Task", TaskSchema);

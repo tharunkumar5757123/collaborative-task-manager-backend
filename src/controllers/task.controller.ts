@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { TaskService } from "../services/task.service";
 import { io } from "../server";
 import Notification from "../models/notification.model";
+import { ITask } from "../models/task.interface"; // <- import the interface
 
 const service = new TaskService();
 
@@ -9,7 +10,6 @@ const service = new TaskService();
 export const createTask = async (req: Request, res: Response) => {
   try {
     const dto = req.body;
-
     const userId = (req as any).userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
@@ -19,7 +19,7 @@ export const createTask = async (req: Request, res: Response) => {
     }
 
     // Create task
-    const task = await service.createTask(userId, dto);
+    const task: ITask = await service.createTask(userId, dto);
 
     // Real-time socket event
     io.emit("taskCreated", task);
@@ -47,9 +47,12 @@ export const updateTask = async (req: Request, res: Response) => {
     const taskId = req.params.id;
 
     // Get old task
-    const oldTask = await service.getTaskById(taskId);
+    const oldTask: ITask = await service.getTaskById(taskId);
 
-    const updatedTask = await service.updateTask(taskId, dto);
+    if (!oldTask) return res.status(404).json({ message: "Task not found" });
+
+    const updatedTask: ITask = await service.updateTask(taskId, dto);
+    if (!updatedTask) return res.status(404).json({ message: "Task not found after update" });
 
     io.emit("taskUpdated", updatedTask);
 
@@ -92,7 +95,7 @@ export const getTasks = async (req: Request, res: Response) => {
     if (req.query.priority) filters.priority = req.query.priority;
     if (req.query.assignedToId) filters.assignedToId = req.query.assignedToId;
 
-    const tasks = await service.getTasks(filters);
+    const tasks: ITask[] = await service.getTasks(filters);
 
     res.json(tasks);
   } catch (err: any) {
