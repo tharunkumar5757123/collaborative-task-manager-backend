@@ -1,23 +1,23 @@
-import { TaskModel } from "../models/task.model";
+import { TaskModel, ITask } from "../models/task.model";
 
 export class TaskRepository {
-  create(data: any) {
+  async create(data: Partial<ITask>): Promise<ITask> {
     return TaskModel.create(data);
   }
 
-  findById(id: string) {
-    return TaskModel.findById(id);
+  async find(filters: any): Promise<ITask[]> {
+    return TaskModel.find(filters).lean(); // <-- plain JS objects
   }
 
-  update(id: string, data: any) {
-    return TaskModel.findByIdAndUpdate(id, data, { new: true });
+  async findById(id: string): Promise<ITask | null> {
+    return TaskModel.findById(id).lean();
   }
 
-  delete(id: string) {
-    return TaskModel.findByIdAndDelete(id);
+  async update(id: string, data: Partial<ITask>): Promise<ITask | null> {
+    return TaskModel.findByIdAndUpdate(id, data, { new: true }).lean();
   }
 
-  find(filters: any) {
-    return TaskModel.find(filters).sort({ dueDate: 1 });
+  async delete(id: string): Promise<void> {
+    await TaskModel.findByIdAndDelete(id);
   }
 }
