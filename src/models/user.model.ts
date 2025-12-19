@@ -19,21 +19,17 @@ const userSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-userSchema.pre<IUser>("save", async function (next: (err?: any) => void) {
-  if (!this.isModified("password")) return next();
-  try {
-    const hash = await bcrypt.hash(this.password, 10);
-    this.password = hash;
-    next();
-  } catch (err) {
-    next(err);
-  }
+/* 🔐 HASH PASSWORD BEFORE SAVE */
+userSchema.pre<IUser>("save", async function () {
+  if (!this.isModified("password")) return;
+  this.password = await bcrypt.hash(this.password, 10);
 });
 
+/* 🔑 COMPARE PASSWORD METHOD */
 userSchema.methods.comparePassword = async function (candidate: string): Promise<boolean> {
   return bcrypt.compare(candidate, this.password);
 };
 
+/* ============================ CREATE & EXPORT MODEL ============================ */
 const User: Model<IUser> = mongoose.model<IUser>("User", userSchema);
-
 export default User;

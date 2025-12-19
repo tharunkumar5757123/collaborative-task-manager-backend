@@ -1,12 +1,15 @@
-import { Types } from "mongoose";
-import { TaskModel, ITask } from "../models/task.model";
+import TaskModel from "../models/task.model"; // ✅ default import
+import { ITask } from "../models/task.model";
 
 export class TaskService {
   async createTask(userId: string, data: Partial<ITask>) {
-    return TaskModel.create({ ...data, creatorId: new Types.ObjectId(userId) });
+    return TaskModel.create({
+      ...data,
+      creatorId: userId,
+    });
   }
 
-  async getTasks(filters: any) {
+  async getTasks(filters: Partial<ITask> = {}) {
     return TaskModel.find(filters).sort({ createdAt: -1 });
   }
 

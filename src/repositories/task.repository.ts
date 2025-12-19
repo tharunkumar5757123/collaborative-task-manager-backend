@@ -1,24 +1,24 @@
-import { TaskModel, ITask } from "../models/task.model";
+import TaskModel from "../models/task.model"; // ✅ default import
+import { ITask } from "../models/task.model";
 
 export class TaskRepository {
-  async create(data: Partial<ITask>): Promise<ITask> {
-    const task = new TaskModel(data);
-    return task.save();
+  async createTask(data: Partial<ITask>) {
+    return TaskModel.create(data);
   }
 
-  async update(taskId: string, data: Partial<ITask>): Promise<ITask | null> {
-    return TaskModel.findByIdAndUpdate(taskId, data, { new: true }).exec();
+  async getTasks(filters: Partial<ITask> = {}) {
+    return TaskModel.find(filters).sort({ createdAt: -1 });
   }
 
-  async delete(taskId: string): Promise<void> {
-    await TaskModel.findByIdAndDelete(taskId).exec();
+  async getTaskById(id: string) {
+    return TaskModel.findById(id);
   }
 
-  async find(filters: any): Promise<ITask[]> {
-    return TaskModel.find(filters).exec();
+  async updateTask(id: string, data: Partial<ITask>) {
+    return TaskModel.findByIdAndUpdate(id, data, { new: true });
   }
 
-  async findById(taskId: string): Promise<ITask | null> {
-    return TaskModel.findById(taskId).exec();
+  async deleteTask(id: string) {
+    return TaskModel.findByIdAndDelete(id);
   }
 }
