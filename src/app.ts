@@ -8,7 +8,6 @@ import notificationRoutes from "./routes/notification.routes";
 
 const app = express();
 
-/* ===================== CORS ===================== */
 app.use(
   cors({
     origin: [
@@ -16,19 +15,16 @@ app.use(
       "https://collaborative-task-manager-frontend.onrender.com",
     ],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   })
 );
 
 app.use(express.json());
 app.use(cookieParser());
 
-/* ===================== ROUTES ===================== */
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/tasks", taskRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 
-/* ===================== HEALTH CHECK ===================== */
 app.get("/", (_, res) => {
   res.send("Task Manager API Running");
 });

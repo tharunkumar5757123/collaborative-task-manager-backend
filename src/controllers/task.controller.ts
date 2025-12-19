@@ -12,14 +12,8 @@ export const createTask = async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    const {
-      title,
-      description,
-      dueDate,
-      priority,
-      assignedToId,
-      status,
-    } = req.body;
+    const { title, description, dueDate, priority, assignedToId, status } =
+      req.body;
 
     if (!title) {
       return res.status(400).json({ message: "Title is required" });
@@ -29,17 +23,16 @@ export const createTask = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Invalid assignedToId" });
     }
 
-    const payload: any = {
+    const payload = {
       title,
-      description: description || undefined,
+      description,
       priority,
       status: status || "To Do",
-      assignedToId: assignedToId || undefined,
+      assignedToId: assignedToId
+        ? new Types.ObjectId(assignedToId)
+        : undefined,
+      dueDate: dueDate ? new Date(dueDate) : undefined,
     };
-
-    if (dueDate) {
-      payload.dueDate = new Date(dueDate);
-    }
 
     const task = await service.createTask(userId, payload);
 
@@ -59,7 +52,6 @@ export const createTask = async (req: Request, res: Response) => {
 
     res.status(201).json(task);
   } catch (err: any) {
-    console.error(err);
     res.status(400).json({ message: err.message });
   }
 };
@@ -67,20 +59,25 @@ export const createTask = async (req: Request, res: Response) => {
 /* ================= UPDATE TASK ================= */
 export const updateTask = async (req: Request, res: Response) => {
   try {
-    const dto = req.body;
     const taskId = req.params.id;
+    const dto = req.body;
 
     const oldTask = await service.getTaskById(taskId);
-    if (!oldTask) return res.status(404).json({ message: "Task not found" });
+    if (!oldTask) {
+      return res.status(404).json({ message: "Task not found" });
+    }
 
     const updatedTask = await service.updateTask(taskId, dto);
+    if (!updatedTask) {
+      return res.status(404).json({ message: "Task not found" });
+    }
 
     io.emit("taskUpdated", updatedTask);
 
     if (
       dto.assignedToId &&
       oldTask.assignedToId?.toString() !== dto.assignedToId &&
-      updatedTask?.assignedToId
+      updatedTask.assignedToId
     ) {
       const notification = await Notification.create({
         user: updatedTask.assignedToId.toString(),
@@ -95,7 +92,6 @@ export const updateTask = async (req: Request, res: Response) => {
 
     res.json(updatedTask);
   } catch (err: any) {
-    console.error(err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -103,10 +99,8 @@ export const updateTask = async (req: Request, res: Response) => {
 /* ================= DELETE TASK ================= */
 export const deleteTask = async (req: Request, res: Response) => {
   try {
-    const taskId = req.params.id;
-    await service.deleteTask(taskId);
-
-    io.emit("taskDeleted", { id: taskId });
+    await service.deleteTask(req.params.id);
+    io.emit("taskDeleted", { id: req.params.id });
     res.status(204).send();
   } catch (err: any) {
     res.status(500).json({ message: err.message });
