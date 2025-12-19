@@ -10,9 +10,7 @@ connectDB();
 
 const server = http.createServer(app);
 
-/* =======================
-   SOCKET.IO CONFIG
-======================= */
+/* ===================== SOCKET.IO CONFIG ===================== */
 export const io = new Server(server, {
   cors: {
     origin: [
@@ -22,22 +20,23 @@ export const io = new Server(server, {
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
   },
+  transports: ["websocket", "polling"],
 });
 
 io.on("connection", (socket) => {
-  const userId = socket.handshake.auth?.userId;
-
-  if (userId) {
-    socket.join(userId);
-  }
-
   console.log("User connected:", socket.id);
+
+  const userId = socket.handshake.auth?.userId;
+  if (userId) {
+    socket.join(userId); // join room for user-specific notifications
+  }
 
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
   });
 });
 
+// Attach custom event handlers
 socketHandler(io);
 
 const PORT = process.env.PORT || 5000;
