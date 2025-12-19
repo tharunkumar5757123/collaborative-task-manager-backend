@@ -8,14 +8,19 @@ const service = new AuthService();
    REGISTER
 ====================== */
 export const register = async (req: Request, res: Response) => {
-  RegisterDto.parse(req.body);
+  try {
+    RegisterDto.parse(req.body);
 
-  const user = await service.register(req.body);
+    const user = await service.register(req.body);
 
-  // ❌ never send password
-  const { password, ...safeUser } = user.toObject();
+    // user is already plain object, no need for toObject
+    const { password, ...safeUser } = user;
 
-  res.status(201).json(safeUser);
+    res.status(201).json(safeUser);
+  } catch (err: any) {
+    console.error("Register error:", err.message || err);
+    res.status(500).json({ message: err.message || "Server error" });
+  }
 };
 
 /* ======================
