@@ -1,11 +1,14 @@
 import { Request, Response } from "express";
+import { Types } from "mongoose";
 import { TaskService } from "../services/task.service";
 import { io } from "../server";
 import Notification from "../models/notification.model";
 
 const service = new TaskService();
 
-// CREATE TASK
+/**
+ * CREATE TASK
+ */
 export const createTask = async (req: Request, res: Response) => {
   try {
     const dto = req.body;
@@ -14,12 +17,13 @@ export const createTask = async (req: Request, res: Response) => {
 
     const task = await service.createTask(userId, dto);
 
+    // Real-time socket event
     io.emit("taskCreated", task);
 
-    // Notify assigned user
+    // Notify assigned user (if any)
     if (task.assignedToId) {
       const notification = await Notification.create({
-        user: task.assignedToId,
+        user: task.assignedToId.toString(),
         message: `You were assigned to task "${task.title}"`,
       });
       io.to(task.assignedToId.toString()).emit("notification:new", notification);
@@ -27,12 +31,14 @@ export const createTask = async (req: Request, res: Response) => {
 
     res.status(201).json(task);
   } catch (err: any) {
-    console.error("Error creating task:", err);
+    console.error("Error creating task:", err.stack || err);
     res.status(500).json({ message: err.message || "Server error" });
   }
 };
 
-// UPDATE TASK
+/**
+ * UPDATE TASK
+ */
 export const updateTask = async (req: Request, res: Response) => {
   try {
     const dto = req.body;
@@ -44,22 +50,30 @@ export const updateTask = async (req: Request, res: Response) => {
     io.emit("taskUpdated", updatedTask);
 
     // Notify if assignment changed
-    if (dto.assignedToId && oldTask.assignedToId?.toString() !== dto.assignedToId) {
+    if (
+      dto.assignedToId &&
+      oldTask.assignedToId?.toString() !== dto.assignedToId
+    ) {
       const notification = await Notification.create({
-        user: updatedTask.assignedToId,
+        user: updatedTask.assignedToId.toString(),
         message: `You were assigned to task "${updatedTask.title}"`,
       });
-      io.to(updatedTask.assignedToId.toString()).emit("notification:new", notification);
+      io.to(updatedTask.assignedToId.toString()).emit(
+        "notification:new",
+        notification
+      );
     }
 
     res.json(updatedTask);
   } catch (err: any) {
-    console.error("Error updating task:", err);
+    console.error("Error updating task:", err.stack || err);
     res.status(500).json({ message: err.message || "Server error" });
   }
 };
 
-// DELETE TASK
+/**
+ * DELETE TASK
+ */
 export const deleteTask = async (req: Request, res: Response) => {
   try {
     const taskId = req.params.id;
@@ -68,23 +82,29 @@ export const deleteTask = async (req: Request, res: Response) => {
     io.emit("taskDeleted", { id: taskId });
     res.status(204).send();
   } catch (err: any) {
-    console.error("Error deleting task:", err);
+    console.error("Error deleting task:", err.stack || err);
     res.status(500).json({ message: err.message || "Server error" });
   }
 };
 
-// GET TASKS
+/**
+ * GET TASKS WITH FILTERS
+ */
 export const getTasks = async (req: Request, res: Response) => {
   try {
     const filters: any = {};
+
     if (req.query.status) filters.status = req.query.status;
     if (req.query.priority) filters.priority = req.query.priority;
-    if (req.query.assignedToId) filters.assignedToId = req.query.assignedToId;
+    if (req.query.assignedToId)
+      filters.assignedToId = new Types.ObjectId(
+        req.query.assignedToId as string
+      );
 
     const tasks = await service.getTasks(filters);
     res.json(tasks);
   } catch (err: any) {
-    console.error("Error fetching tasks:", err);
+    console.error("Error fetching tasks:", err.stack || err);
     res.status(500).json({ message: err.message || "Server error" });
   }
 };
