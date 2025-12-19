@@ -38,7 +38,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // Parse JSON and cookies
-app.options("*", cors());
+// app.options("*", cors());
 app.use(express.json());
 app.use(cookieParser());
 
