@@ -12,34 +12,55 @@ const service = new TaskService();
 export const createTask = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-    const dto = req.body;
+    const {
+      title,
+      description,
+      dueDate,
+      priority,
+      assignedToId,
+      status,
+    } = req.body;
 
-    // Validate assignedToId if provided
-    if (dto.assignedToId && !Types.ObjectId.isValid(dto.assignedToId)) {
+    if (!title) {
+      return res.status(400).json({ message: "Title is required" });
+    }
+
+    // Validate assignedToId
+    if (assignedToId && !Types.ObjectId.isValid(assignedToId)) {
       return res.status(400).json({ message: "Invalid assignedToId" });
     }
 
-    // Create task
-    const task = await service.createTask(userId, dto);
+    const task = await service.createTask(userId, {
+      title,
+      description: description || undefined,
+      priority,
+      status: status || "To Do",
+      dueDate: dueDate ? new Date(dueDate) : undefined,
+      assignedToId: assignedToId || undefined,
+    });
 
-    // Socket.io event
     io.emit("taskCreated", task);
 
-    // Notify assigned user
     if (task.assignedToId) {
       const notification = await Notification.create({
         user: task.assignedToId.toString(),
         message: `You were assigned to task "${task.title}"`,
       });
+
       io.to(task.assignedToId.toString()).emit("notification:new", notification);
     }
 
     res.status(201).json(task);
   } catch (err: any) {
-    console.error("Error creating task:", err.stack || err);
-    res.status(500).json({ message: err.message || "Server error" });
+    console.error("Error creating task:", err.message);
+    res.status(400).json({
+      message: "Task creation failed",
+      error: err.message,
+    });
   }
 };
 
