@@ -1,5 +1,5 @@
 import TaskModel from "../models/task.model"; // ✅ default import
-import { ITask } from "../models/task.model";
+import type { ITask } from "../models/task.model"; // type-only import
 
 export class TaskService {
   async createTask(userId: string, data: Partial<ITask>) {

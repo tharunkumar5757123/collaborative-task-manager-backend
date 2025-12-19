@@ -26,11 +26,16 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
 
 // Task owner authorization
 export const authorizeTaskOwner = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  const task = await TaskModel.findById(req.params.id);
-  if (!task) return res.status(404).json({ message: "Task not found" });
+  try {
+    const task = await TaskModel.findById(req.params.id);
+    if (!task) return res.status(404).json({ message: "Task not found" });
 
-  if (task.creatorId.toString() !== req.user?._id.toString())
-    return res.status(403).json({ message: "Forbidden" });
+    if (!req.user || task.creatorId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
 
-  next();
+    next();
+  } catch (err: any) {
+    res.status(500).json({ message: err.message || "Server error" });
+  }
 };

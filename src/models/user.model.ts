@@ -1,12 +1,10 @@
-import mongoose, { Document, Schema, Model } from "mongoose";
-import bcrypt from "bcryptjs";
+import mongoose, { Document, Model, Schema } from "mongoose";
 
 export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
   role: "user" | "admin";
-  comparePassword(candidate: string): Promise<boolean>;
 }
 
 const userSchema = new Schema<IUser>(
@@ -19,17 +17,5 @@ const userSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-/* 🔐 HASH PASSWORD BEFORE SAVE */
-userSchema.pre<IUser>("save", async function () {
-  if (!this.isModified("password")) return;
-  this.password = await bcrypt.hash(this.password, 10);
-});
-
-/* 🔑 COMPARE PASSWORD METHOD */
-userSchema.methods.comparePassword = async function (candidate: string): Promise<boolean> {
-  return bcrypt.compare(candidate, this.password);
-};
-
-/* ============================ CREATE & EXPORT MODEL ============================ */
 const User: Model<IUser> = mongoose.model<IUser>("User", userSchema);
 export default User;
